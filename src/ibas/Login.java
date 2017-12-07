@@ -5,9 +5,14 @@ This is the main Java application. When run the GUI interface pops up and
 prompts the user with login information. Once login has been confirmed additional
 options appear.
 */
-import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import javax.swing.*;
 
 
 class Login extends JFrame implements ActionListener {
@@ -30,6 +35,11 @@ class Login extends JFrame implements ActionListener {
 	JPanel panel;
 	JLabel usernameLabel, passwordLabel;
 	final JTextField usernameText, passwordText;
+        
+        // DB Variables
+        Connection conn;
+        String connectionURL;
+        String dbName = "ibas";
 
 	Login() {
 		usernameLabel = new JLabel();
@@ -68,40 +78,71 @@ class Login extends JFrame implements ActionListener {
         /*
         This is where the users credentials are checked against the database
         */
+        @Override
 	public void actionPerformed(ActionEvent ae) {
 		String value1 = usernameText.getText();
 		String value2 = passwordText.getText();
-		/**
-		 * Username:abc Password:abc Because no connection to database or any
-		 * files. so this is just a static application.
-		 */
-		if (value1.equals("abc") && value2.equals("abc")) {
+		
+                
+                /** DB SQL SCRIPT:
+                * CREATE TABLE users (
+                *  user_id INTEGER NOT NULL GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1) PRIMARY KEY,
+                *  username VARCHAR(64) NOT NULL,
+                *  password VARCHAR(64) NOT NULL
+                * );
+                * -- Default Admin account
+                * INSERT INTO users (username, password) VALUES('abc', 'abc');
+                */
+                
+                // Connection String for Derby DB
+                connectionURL = "jdbc:derby://localhost:1527/" + dbName + 
+                        ";create=true;";
+                
+                // DB Connection Attempt
+                try {
+                    conn = DriverManager.getConnection(connectionURL);
+                } catch (SQLException ex) {
+                    ex.getMessage();
+                }
+                // If no connection
+                if (conn == null){
+                    try {
+                        throw new SQLException("Cannot connect to database.");
+                    } catch (SQLException ex) {
+                        ex.getMessage();
+                    }
+                }
+                // If connection
+                String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+                try {
+                    // Prepared Statement
+                    PreparedStatement stmt = conn.prepareStatement(sql);
+                    stmt.setString(1, value1); // Input param 1
+                    stmt.setString(2, value2); // Input param 2 
+                    ResultSet rs = stmt.executeQuery(); // Execute SQL
+                    // If valid login
+                    if (rs.next()) {
 			MainPage page = new MainPage();
 			page.setSize(900, 500);
 			page.setVisible(true);
 			panel.setVisible(false);
-		} else {
-			System.out.println("enter the valid username and password");
-			JOptionPane.showMessageDialog(this, "Incorrect login or password",
-					"Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
-}
-
-                /*
-                    The main method where the GUI is called.
-                */
-class LoginDemo {
-	public static void main(String args[]) {
-		try {
-			Login frame = new Login();
-			frame.setSize(900, 500);
-			frame.setVisible(true);
-                        frame.setDefaultCloseOperation (JFrame.EXIT_ON_CLOSE);
-                        
-			
-		} catch (Exception e) {
-			JOptionPane.showMessageDialog(null, e.getMessage());
-		}
+                    // If not valid login
+                    } else {
+                        System.out.println("enter the valid username and password");
+                        JOptionPane.showMessageDialog(this, "Incorrect login or password",
+                                        "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                    rs.close();
+                } catch (SQLException ex) {
+                    ex.getMessage();
+                } finally {
+                    if (conn != null) {
+                        try {
+                            conn.close();
+                        } catch (SQLException ex) {
+                            ex.getMessage();
+                        }
+                    }
+                }
 	}
 }
