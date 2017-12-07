@@ -95,8 +95,8 @@ class Login extends JFrame implements ActionListener {
                 */
                 
                 // Connection String for Derby DB
-                connectionURL = "jdbc:derby://localhost:1527/" + dbName + 
-                        ";create=true;";
+                connectionURL = "jdbc:derby:" + dbName + 
+                        ";create=true";
                 
                 // DB Connection Attempt
                 try {
